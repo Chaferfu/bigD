@@ -17,22 +17,24 @@ def contraste(img):
 	img[img>155] = 255
 	img[img<=20] = 0
 
-
-		
-h
+populations = ["Y a rien ici haha",np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])]
 
 
 
+train_data, test_data = importData()
+print(train_data['y'][2])
 
+for i, data in enumerate(train_data['y']):
+	np.append(populations[data[0]], train_data['X'][:, :, :, i])
 
-train_data, test_data = importData();
-
-contraste(train_data["X"])
-image_idx = 0
-print("Label:", train_data["y"][image_idx])
-print(train_data["X"][:, :, :, image_idx])
-plt.imshow(train_data["X"][:, :, :, image_idx])
-plt.show()
+def bigboyRP():
+	return
+# contraste(train_data["X"])
+# image_idx = 0
+# print("Label:", train_data["y"][image_idx])
+# print(train_data["X"][:, :, :, image_idx])
+# plt.imshow(train_data["X"][:, :, :, image_idx])
+# plt.show()
 
 
 
