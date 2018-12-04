@@ -9,6 +9,17 @@ from sklearn import svm
 from math import sqrt
 from sklearn.neighbors import KNeighborsClassifier
 
+def printBandeauNouveauTest(nom):
+	s = "☺||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+	for i in range(len(nom) + 4):
+		s += "|"
+	s += "☺"
+	print("\n" + s)
+	print("☺|||||||||||||||||||||||||||||||  " + nom + "  |||||||||||||||||||||||||||||||☺")
+	print(s + "\n")
+
+def printBandeauSimple(nom):
+	print("☺|||||||||||||||||||||||||||||||  " + nom + "  |||||||||||||||||||||||||||||||☺\n")
 
 def rgb2gray(rgb):
     return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
@@ -125,8 +136,11 @@ def CDM():
 
 def KNN():
 
+	printBandeauNouveauTest("KNN")
+	printBandeauSimple("Import des données")
 	train_data, test_data = importData()
 
+	printBandeauSimple("Pré-traitement des images")
 	imagesRetouchees = pretraitement(train_data["X"])
 	X = preparerPourFit(imagesRetouchees)
 
@@ -134,18 +148,17 @@ def KNN():
 	for truc in train_data['y']:
 		y = np.append(y, (truc[0]))
 
+
 	neigh = KNeighborsClassifier(n_neighbors=3)
 
-	print("Entrainement de neigh")
+	printBandeauSimple("Entrainement du classifieur")
 	neigh.fit(X, y)
 
 	Xtest = preparerPourFit(pretraitement(test_data["X"]))
 
 	nbReussites = 0
-	print("Neigh is predicting, please wait")
-	reponses = neigh.predict(Xtest[:1000])
-
-	print("Alors maintenant Neigh, on va te poser " + str(len(reponses)) + " questions ok ? ")
+	printBandeauSimple("Lancement de la prédiction : " + str(len(reponses)))
+	reponses = neigh.predict(Xtest[:100])
 
 	for i, reponse in enumerate(reponses):
 		print(int(reponse), test_data['y'][i][0])
@@ -213,6 +226,7 @@ def SVM():
 	print("Bob a trouvé " + str(nbReussites) + " reponses justses. Bravo Bob !")
 	print("pourcentage de réussite de Bob : " + str((float(nbReussites)/float(len(reponses)))))
 	print("au revoir")
+
 
 #SVM()
 #CDM()

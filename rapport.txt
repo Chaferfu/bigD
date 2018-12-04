@@ -1,0 +1,6 @@
+Grid search
+
+marrant mais pas top ya pas le 3e jeu train validation test
+
+
+
