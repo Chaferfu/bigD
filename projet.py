@@ -2,6 +2,8 @@
 # coding: utf-8
 
 from __future__ import print_function
+import datetime
+import time
 import numpy as np
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
@@ -68,21 +70,25 @@ def pretraitement(data):
 		#print("ca travaille ", i, data.shape[3], end = '')
 		if i % data.shape[3]/100 == 0:
 			print("|", end = '')
-		imagesRetouchees.append( contraste(fondBlanc(rgb2gray(data[:, :, :, i]))))
+		imagesRetouchees.append(contraste(fondBlanc(rgb2gray(data[:, :, :, i]))))
 	
 	#imagesRetouchees = np.array(imagesRetouchees)
 	print("")
 	return np.array(imagesRetouchees)
 
 
+
 def preparerPourFit(data):
 	print("Preparation des donnees pour fit le modele")
-	#data = train_data['data']
-	#data = np.transpose(data, (3,0,1,2))
+	if data.shape[-1] > 32:
+		data = np.transpose(data, (3,0,1,2))
 	print(data.shape , end='')
-	#print(data)
+	nbDim = data.ndim
 	nbElt = data.shape[0]
-	nbFeatures = data.shape[1]*data.shape[2]
+	nbFeatures = 1
+	for i in range(1, data.ndim):
+		nbFeatures *= data.shape[i]
+
 	data = data.reshape(nbElt, nbFeatures)
 
 	print(" -> ", data.shape)
@@ -134,14 +140,18 @@ def CDM():
 	print("resultttttttttttttttat", float(nbTrouve)/float(len(test_data['y'])))
 	return
 
-def KNN():
+def KNN(pretraiter, n):
 
 	printBandeauNouveauTest("KNN")
 	printBandeauSimple("Import des données")
 	train_data, test_data = importData()
 
-	printBandeauSimple("Pré-traitement des images")
-	imagesRetouchees = pretraitement(train_data["X"])
+	if pretraiter:
+		printBandeauSimple("Pré-traitement des images")
+		imagesRetouchees = pretraitement(train_data["X"])
+	else:
+		imagesRetouchees = train_data["X"]
+
 	X = preparerPourFit(imagesRetouchees)
 
 	y = np.array([])
@@ -149,24 +159,42 @@ def KNN():
 		y = np.append(y, (truc[0]))
 
 
-	neigh = KNeighborsClassifier(n_neighbors=3)
+	neigh = KNeighborsClassifier(n_neighbors=n)
 
 	printBandeauSimple("Entrainement du classifieur")
+	startFit = time.clock()
 	neigh.fit(X, y)
+	fitTime = str(time.clock() - startFit)
 
-	Xtest = preparerPourFit(pretraitement(test_data["X"]))
+	if pretraiter:
+		Xtest = preparerPourFit(pretraitement(test_data["X"][:100]))
+	else:
+		Xtest = preparerPourFit(test_data["X"][:100])
 
 	nbReussites = 0
-	printBandeauSimple("Lancement de la prédiction : " + str(len(reponses)))
+	printBandeauSimple("Lancement de la prédiction : ")
+	startPredict = time.clock()
 	reponses = neigh.predict(Xtest[:100])
+	predictTime = str(time.clock() - startPredict)
 
 	for i, reponse in enumerate(reponses):
 		print(int(reponse), test_data['y'][i][0])
 		if int(reponse) == test_data['y'][i][0]:
 			nbReussites+=1
 
+	reussite = str((float(nbReussites)/float(len(reponses))))
+
 	print("Neigh a trouvé " + str(nbReussites) + " reponses justses. Bravo Neigh !")
-	print("pourcentage de réussite de Neigh : " + str((float(nbReussites)/float(len(reponses)))))
+	print("pourcentage de réussite de Neigh : " + reussite)
+
+
+	filename = "resultatsKNN.txt"
+	with open(filename, mode='a') as file:
+		file.write('At %s \t pretraitement = %s\tn=%s\tresult %s\tfit time %s\tpredict time %s .\n' % 
+			(datetime.datetime.now(), "yes" if pretraiter else "no", str(n), reussite, fitTime, predictTime))
+
+	print("REsultats ecris dans " + filename)
+
 	print("au revoir")
 
 
@@ -224,10 +252,25 @@ def SVM():
 			nbReussites+=1
 
 	print("Bob a trouvé " + str(nbReussites) + " reponses justses. Bravo Bob !")
-	print("pourcentage de réussite de Bob : " + str((float(nbReussites)/float(len(reponses)))))
+	reussite = str((float(nbReussites)/float(len(reponses))))
+	print("pourcentage de réussite de Bob : " + reussite)
+	filename = "resultatsSVM.txt"
+	with open(filename, mode='a') as file:
+		file.write('At %s result %s .\n' % 
+			(datetime.datetime.now(), reussite))
+
+	print("REsultats ecris dans " + filename)
 	print("au revoir")
+
+
+	return
+
 
 
 #SVM()
 #CDM()
-KNN()
+for i in range(1,15):
+	KNN(True, i)
+
+for i in range(1,15):
+	KNN(False, i)
