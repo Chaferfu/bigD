@@ -50,10 +50,12 @@ def contraste(img):
 	img[img<=100] = 0
 	return img
 
-def CDM_predict(img, prototypes):
+def CDM_predict(img, prototypes, pretraiter):
 	label = 0 
 	scores = []
-	img = contraste(fondBlanc(rgb2gray(img)))
+	if pretraiter:
+		img = contraste(fondBlanc(rgb2gray(img)))
+
 	img = img.flatten()
 	for i in range(len(prototypes)):
 		diff = img - prototypes[i] 
@@ -97,7 +99,7 @@ def preparerPourFit(data):
 
 
 
-def CDM():
+def CDM(pretraiter):
 
 	populations = [[],[],[],[],[],[],[],[],[],[]]
 
@@ -107,10 +109,15 @@ def CDM():
 
 	imagesRetouchees = []
 
-	for i in range(len(train_data['y'])):
-		imagesRetouchees.append(contraste(fondBlanc(rgb2gray(train_data['X'][:, :, :, i]))))
+	if pretraiter:
+		for i in range(len(train_data['y'])):
+			imagesRetouchees.append(contraste(fondBlanc(rgb2gray(train_data['X'][:, :, :, i]))))
+	else:
+		for i in range(len(train_data['y'])):
+			imagesRetouchees.append(train_data['X'][:, :, :, i])
 
 	print("tri des images")
+	startFit = time.clock()
 
 	for i, data in enumerate(train_data['y']):
 		if data[0] == 10:
@@ -120,29 +127,37 @@ def CDM():
 
 
 	print("Calcul des representants")
-
 	for i in range(10):
 		print("Calcul du representant de " + str(i) + " ")
 
 		populations[i] = np.array(populations[i])
 		prototypes.append(np.average(populations[i], axis = 0))
 		prototypes[i] = prototypes[i].flatten()
+
+	fitTime = str(time.clock() - startFit)
 		
+	print("prediction")
+	startPredict = time.clock()
 	nbTrouve = 0
 	for i, data in enumerate(test_data['y']):
-		label = CDM_predict(test_data['X'][:, :, :, i], prototypes)
-		print(data[0], label)
+		label = CDM_predict(test_data['X'][:, :, :, i], prototypes, pretraiter)
+		# print(data[0], label)
 		if data[0] == 10 and label == 0:
 			nbTrouve += 1
 		elif data[0] == label:
 			nbTrouve += 1
+
+	predictTime = str(time.clock() - startPredict)
 			
-	print("resultttttttttttttttat", float(nbTrouve)/float(len(test_data['y'])))
-	return
+	reussite = str(float(nbTrouve)/float(len(test_data['y'])))
+	print("reussitettttttttttttttat" + reussite)
+
+	return [str(datetime.datetime.now()), "yes" if pretraiter else "no", reussite, fitTime, predictTime]
+
 
 def KNN(pretraiter, n):
 
-	printBandeauNouveauTest("KNN")
+	printBandeauNouveauTest("KNN " + ("avec pretraitement" if pretraiter else "sans pretraitement") + " " + str(n) + " voisins")
 	printBandeauSimple("Import des données")
 	train_data, test_data = importData()
 
@@ -174,7 +189,7 @@ def KNN(pretraiter, n):
 	nbReussites = 0
 	printBandeauSimple("Lancement de la prédiction : ")
 	startPredict = time.clock()
-	reponses = neigh.predict(Xtest[:100])
+	reponses = neigh.predict(Xtest[:1000])
 	predictTime = str(time.clock() - startPredict)
 
 	for i, reponse in enumerate(reponses):
@@ -190,12 +205,15 @@ def KNN(pretraiter, n):
 
 	filename = "resultatsKNN.txt"
 	with open(filename, mode='a') as file:
-		file.write('At %s \t pretraitement = %s\tn=%s\tresult %s\tfit time %s\tpredict time %s .\n' % 
+		file.write('At %s \t pretraitement = %s\tn=%s\tresult %s\tfit time %s\tpredict time sur 1000 images %s .\n' % 
 			(datetime.datetime.now(), "yes" if pretraiter else "no", str(n), reussite, fitTime, predictTime))
 
 	print("REsultats ecris dans " + filename)
 
 	print("au revoir")
+
+	return [str(datetime.datetime.now()), "yes" if pretraiter else "no", str(n), reussite, fitTime, predictTime]
+
 
 
 
@@ -263,14 +281,15 @@ def SVM():
 	print("au revoir")
 
 
-	return
+	return 
 
 
 
 #SVM()
 #CDM()
-for i in range(1,15):
-	KNN(True, i)
+# for i in range(1,15):
+# 	KNN(True, i)
 
-for i in range(1,15):
-	KNN(False, i)
+# for i in range(1,15):
+# 	KNN(False, i)
+
