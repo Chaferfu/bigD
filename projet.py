@@ -37,24 +37,29 @@ def importData():
 	test_data = loadmat("test_32x32.mat")
 	return train_data, test_data;
 
-def fondBlanc(img):
+def fondBlanc(img, val = 106):
 	av = np.average(img)
-	if av < 106 :
+	if av < val :
 		return 255 - img
 	else:
 		return img
 
-def contraste(img):
+def contraste(img, upper = 240, lower = 100):
 	
-	img[img>240] = 255
-	img[img<=100] = 0
+	img[img>upper] = 255
+	img[img<=lower] = 0
 	return img
 
-def CDM_predict(img, prototypes, pretraiter):
+def CDM_predict(img, prototypes, pretraiter, val = 106, upper = 240, lower = 100, blackWhite = True):
+
 	label = 0 
 	scores = []
 	if pretraiter:
-		img = contraste(fondBlanc(rgb2gray(img)))
+		if blackWhite:
+			img = contraste(fondBlanc(rgb2gray(img), val), upper, lower)
+		else:
+			img = contraste(fondBlanc(img, val), upper, lower)
+
 
 	img = img.flatten()
 	for i in range(len(prototypes)):
@@ -63,16 +68,16 @@ def CDM_predict(img, prototypes, pretraiter):
 
 	return scores.index(min(scores))
 
-def pretraitement(data):
+def pretraitement(data, val = 106, upper = 240, lower = 100, blackWhite = True):
 	print("Application du pretraitement")
 	print(data.shape)
 	print(len(data))
 	imagesRetouchees = []
 	for i in range(data.shape[3]):
-		#print("ca travaille ", i, data.shape[3], end = '')
-		if i % data.shape[3]/100 == 0:
-			print("|", end = '')
-		imagesRetouchees.append(contraste(fondBlanc(rgb2gray(data[:, :, :, i]))))
+		if blackWhite:
+			imagesRetouchees.append(contraste(fondBlanc(rgb2gray(data[:, :, :, i]), val), upper, lower))
+		else:
+			imagesRetouchees.append(contraste(fondBlanc(data[:, :, :, i], val), upper, lower))
 	
 	#imagesRetouchees = np.array(imagesRetouchees)
 	print("")
@@ -216,7 +221,114 @@ def KNN(pretraiter, n):
 
 
 
+def testPretraitementCDM(val, upper, lower, blackWhite):
 
+	populations = [[],[],[],[],[],[],[],[],[],[]]
+
+	prototypes = []
+
+	train_data, test_data = importData()
+
+	startPretraitement = time.clock()
+	imagesRetouchees = pretraitement(train_data["X"], val, upper, lower, blackWhite)
+	pretraitementTime = time.clock() - startPretraitement
+
+	print("tri des images")
+	startFit = time.clock()
+
+	for i, data in enumerate(train_data['y']):
+		if data[0] == 10:
+			populations[0].append(imagesRetouchees[i])
+		else:
+			populations[data[0]].append(imagesRetouchees[i])
+
+
+	print("Calcul des representants")
+	for i in range(10):
+		print("Calcul du representant de " + str(i) + " ")
+
+		populations[i] = np.array(populations[i])
+		prototypes.append(np.average(populations[i], axis = 0))
+		prototypes[i] = prototypes[i].flatten()
+
+	fitTime = str(time.clock() - startFit)
+		
+	print("prediction")
+	startPredict = time.clock()
+	nbTrouve = 0
+	for i, data in enumerate(test_data['y']):
+		label = CDM_predict(test_data['X'][:, :, :, i], prototypes, True, val, upper, lower, blackWhite)
+		# print(data[0], label)
+		if data[0] == 10 and label == 0:
+			nbTrouve += 1
+		elif data[0] == label:
+			nbTrouve += 1
+
+	predictTime = str(time.clock() - startPredict)
+			
+	reussite = str(float(nbTrouve)/float(len(test_data['y'])))
+	print("reussitettttttttttttttat" + reussite)
+
+	return [str(datetime.datetime.now()), val, upper, lower, blackWhite, reussite, fitTime, predictTime, pretraitementTime]
+
+def testPretraitementKNN(pretraiter, val, upper, lower, blackWhite, n):
+
+	printBandeauNouveauTest("KNN " + ("avec pretraitement" if pretraiter else "sans pretraitement") + " " + str(n) + " voisins")
+	printBandeauSimple("Import des données")
+	train_data, test_data = importData()
+
+	if pretraiter:
+		printBandeauSimple("Pré-traitement des images")
+		imagesRetouchees = pretraitement(train_data["X"], val, upper, lower, blackWhite)
+	else:
+		imagesRetouchees = train_data["X"]
+
+	X = preparerPourFit(imagesRetouchees)
+
+	y = np.array([])
+	for truc in train_data['y']:
+		y = np.append(y, (truc[0]))
+
+
+	neigh = KNeighborsClassifier(n_neighbors=n)
+
+	printBandeauSimple("Entrainement du classifieur")
+	startFit = time.clock()
+	neigh.fit(X, y)
+	fitTime = str(time.clock() - startFit)
+
+	if pretraiter:
+		Xtest = preparerPourFit(pretraitement(test_data["X"][:100]), val, upper, lower, blackWhite)
+	else:
+		Xtest = preparerPourFit(test_data["X"][:100])
+
+	nbReussites = 0
+	printBandeauSimple("Lancement de la prédiction : ")
+	startPredict = time.clock()
+	reponses = neigh.predict(Xtest[:1000])
+	predictTime = str(time.clock() - startPredict)
+
+	for i, reponse in enumerate(reponses):
+		print(int(reponse), test_data['y'][i][0])
+		if int(reponse) == test_data['y'][i][0]:
+			nbReussites+=1
+
+	reussite = str((float(nbReussites)/float(len(reponses))))
+
+	print("Neigh a trouvé " + str(nbReussites) + " reponses justses. Bravo Neigh !")
+	print("pourcentage de réussite de Neigh : " + reussite)
+
+
+	filename = "resultatsKNN.txt"
+	with open(filename, mode='a') as file:
+		file.write('At %s \t pretraitement = %s\tn=%s\tresult %s\tfit time %s\tpredict time sur 1000 images %s .\n' % 
+			(datetime.datetime.now(), "yes" if pretraiter else "no", str(n), reussite, fitTime, predictTime))
+
+	print("REsultats ecris dans " + filename)
+
+	print("au revoir")
+
+	return [str(datetime.datetime.now()), "yes" if pretraiter else "no", str(n), reussite, fitTime, predictTime]
 
 
 

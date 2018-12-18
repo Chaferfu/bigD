@@ -1,5 +1,6 @@
 from __future__ import print_function
-
+import time
+import datetime
 import numpy as np
 import torch
 import torch.nn as nn
@@ -27,7 +28,7 @@ class CNN(nn.Module):
             return x
 
 
-if __name__ == '__main__':
+def main(epoch_nbr = 10, batch_size = 10, learning_rate = 1e-3):
 
     # Load the dataset
     train_data = loadmat('train_32x32.mat')
@@ -43,15 +44,22 @@ if __name__ == '__main__':
     test_label = torch.from_numpy(test_label.astype('int')).squeeze(1)
     test_data = torch.from_numpy(test_data['X'].astype('float32')).permute(3, 2, 0, 1)[:2500]
 
-    # Hyperparameters
-    epoch_nbr = 15
-    batch_size = 10
-    learning_rate = 1e-3
+    # # Hyperparameters
+    # epoch_nbr = 15
+    # batch_size = 10
+    # learning_rate = 1e-3
+
+
 
     net = CNN()
     optimizer = optim.SGD(net.parameters(), lr=learning_rate)
+    trainingTime = 0
+    reussiteTrain = ""
+    reussiteTest = ""
+
     for e in range(epoch_nbr):
         print("Epoch", e)
+        startEpoch = time.clock()
         for i in range(0, train_data.shape[0], batch_size):
             optimizer.zero_grad() # Reset all gradients to 0
             predictions_train = net(train_data[i:i+batch_size])
@@ -60,18 +68,32 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step() # Perform the weights update
 
+        epochTime = time.clock() - startEpoch
+
+        trainingTime += epochTime
+
+        print("Epoch time : " + str(epochTime))
+
+        startPredictTrain = time.clock()
         predictions_train = net(train_data)
         _, class_predicted = torch.max(predictions_train, 1)
-
+        predictTimeTrain = time.clock() - startPredictTrain
         resultTrain = (class_predicted == train_label)
         resultTrain = resultTrain.type(torch.int32)
+        reussiteTrain = str(float(sum(resultTrain))/float(len(resultTrain)))
+        print("resultTrainaaaaat" + reussiteTrain)
 
-        print("resultTrainaaaaat" , float(sum(resultTrain))/float(len(resultTrain)))
-
+        startPredictTimeTest = time.clock()
         predictions_test = net(test_data)
         _, class_predicted = torch.max(predictions_test, 1)
+        predictTimeTest = time.clock() - startPredictTimeTest
 
         resultTest = (class_predicted == test_label)
         resultTest = resultTest.type(torch.int32)
 
-        print("resultTestaaaaat" , float(sum(resultTest))/float(len(resultTest)), end="\n\n")
+        reussiteTest = str(float(sum(resultTest))/float(len(resultTest)))
+        print("resultTest" + reussiteTest, end="\n\n")
+
+    trainingTimePerEpoch = trainingTime / epoch_nbr
+
+    return [str(datetime.datetime.now()), epoch_nbr, batch_size, learning_rate, reussiteTrain, reussiteTest, trainingTimePerEpoch, trainingTime  ]
