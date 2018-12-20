@@ -72,7 +72,7 @@ def pretraitement(data, val = None, upper = None, lower = None, blackWhite = Non
 
 def acp(data, nc):
 
-	pca = PCA(n_components=nc)
+	pca = PCA(n_components = nc)
 	data = pca.fit_transform(data)
 
 	return data
@@ -131,19 +131,53 @@ def CDM(train_imgs, train_labels, test_imgs, test_labels):
 
 	return [str(datetime.datetime.now()), reussite, fitTime, predictTime]
 
+def KNN(train_imgs, train_labels, test_imgs, test_labels, n):
+	print("KNN "  + str(n) + " voisins")
+	print("Import des données")
 
-train_data, test_data = importData()
-
-traitees = pretraitement(train_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
-
-print(train_data["X"].shape)
-# print(traitees)
-print(traitees.shape)
+	y = np.array([])
+	for truc in train_labels:
+		y = np.append(y, (truc[0]))
 
 
-traitessTest = pretraitement(test_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
+	neigh = KNeighborsClassifier(n_neighbors=n)
 
-traitees = acp(traitees, 500)
-traitessTest = acp(traitessTest, 500)
+	print("Entrainement du classifieur")
+	print(train_imgs.shape, y.shape)
+	startFit = time.clock()
+	neigh.fit(train_imgs, y)
+	fitTime = str(time.clock() - startFit)
 
-CDM(traitees, train_data['y'], traitessTest, test_data['y'])
+	nbReussites = 0
+	print("Lancement de la prédiction : ")
+	startPredict = time.clock()
+	reponses = neigh.predict(test_imgs)
+	predictTime = str(time.clock() - startPredict)
+
+	for i, reponse in enumerate(reponses):
+		if int(reponse) == test_labels[i][0]:
+			nbReussites+=1
+
+	reussite = str((float(nbReussites)/float(len(reponses))))
+
+	print("Neigh a trouvé " + str(nbReussites) + " reponses justses. Bravo Neigh !")
+	print("pourcentage de réussite de Neigh : " + reussite)
+
+	print("au revoir")
+
+	return [str(datetime.datetime.now()), str(n), reussite, fitTime, predictTime]
+
+
+
+
+if __name__ == "__main__":
+	
+	train_data, test_data = importData()
+
+	traitees = pretraitement(train_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
+	traitessTest = pretraitement(test_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
+
+	# traitees = acp(traitees, 500)
+	# traitessTest = acp(traitessTest, 500)
+
+	KNN(traitees[:100], train_data['y'][:100], traitessTest[:100], test_data['y'][:100], 3)
