@@ -1,6 +1,7 @@
 import projet
-import dl_SVHM
 import gspread
+import clean
+import time
 from oauth2client.service_account import ServiceAccountCredentials
 
 def next_available_row(worksheet):
@@ -12,50 +13,17 @@ creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', s
 client = gspread.authorize(creds)
 
 sh = client.open('results')
-cdm = sh.worksheet("CDM")
-# cdm.insert_row(projet.CDM(False),next_available_row(cdm))
-
-# print(trucs)
-
-knn = sh.worksheet("KNN")
-
-# # for i in range(1,16):
-# # 	knn.insert_row(projet.KNN(True,i), next_available_row(knn))
-
-# for i in range(13,16):
-# 	knn.insert_row(projet.KNN(False,i), next_available_row(knn))
+knnn = sh.worksheet("KNN n")
 
 
-pre = sh.worksheet("preCDM")
+train_data, test_data = clean.importData()
 
-# pre.insert_row(projet.testPretraitementCDM(25, 240, 100, True))
+traitees = clean.pretraitement(train_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
+traitessTest = clean.pretraitement(test_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
+nb = 15000
+for n in range(3,30):
 
-# for i in range(0, 256, 5):
-# 	pre.insert_row(projet.testPretraitementCDM(i, 240, 100, True), 2)
+	line = clean.KNN(traitees[:nb], train_data['y'][:nb], traitessTest[:100], test_data['y'][:100], n)
+	line.extend([nb, float(n)/float(nb)])
+	knnn.insert_row(line, 2)
 
-# for i in range(0, 256, 5):
-# 	pre.insert_row(projet.testPretraitementCDM(106, i, 100, True), 2)
-
-# for i in range(0, 256, 5):
-# 	pre.insert_row(projet.testPretraitementCDM(106, 240, i, True), 2)
-
-# for i in range(45, 256, 5):
-# 	pre.insert_row(projet.testPretraitementCDM(i, 240, 100, False), 2)
-
-# for i in range(0, 256, 5):
-# 	pre.insert_row(projet.testPretraitementCDM(106, i, 100, False), 2)
-
-# for i in range(0, 256, 5):
-# 	pre.insert_row(projet.testPretraitementCDM(106, 240, i, False), 2)
-
-	
-cnn = sh.worksheet("CNN")
-
-# for i in range(1,20):
-# 	cnn.insert_row(dl_SVHM.main(epoch_nbr = i), 2)
-
-for i in range(10):
-	cnn.insert_row(dl_SVHM.main(batch_size = 2**i))
-
-for i in range(-5, 1):
-	cnn.insert_row(dl_SVHM.main(learning_rate = 10**i))
