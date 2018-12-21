@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 import datetime
+import cPickle
 import time
 import numpy as np
 from scipy.io import loadmat
@@ -133,7 +134,6 @@ def CDM(train_imgs, train_labels, test_imgs, test_labels):
 
 def KNN(train_imgs, train_labels, test_imgs, test_labels, n):
 	print("KNN "  + str(n) + " voisins")
-	print("Import des données")
 
 	y = np.array([])
 	for truc in train_labels:
@@ -167,17 +167,64 @@ def KNN(train_imgs, train_labels, test_imgs, test_labels, n):
 
 	return [str(datetime.datetime.now()), str(n), reussite, fitTime, predictTime]
 
+def saveTrainedKNN(train_imgs, train_labels, n, fileName):
+
+	print("KNN "  + str(n) + " voisins")
+
+	y = np.array([])
+	for truc in train_labels:
+		y = np.append(y, (truc[0]))
+
+
+	neigh = KNeighborsClassifier(n_neighbors=n)
+
+	print("Entrainement du classifieur")
+	neigh.fit(train_imgs, y)
+	print("fini.")
+
+	with open(fileName, 'wb') as fid:
+		cPickle.dump(neigh, fid)
+
+	print("classifieur sauvegardé dans le fichier " + fileName)
+
+def trainedKNN(test_imgs, test_labels, fileName):
+
+	print("Import du modele KNN entrainé")
+	with open(fileName, 'rb') as fid:
+		neigh = cPickle.load(fid)
+
+	nbReussites = 0
+	print("Lancement de la prédiction : ")
+	reponses = neigh.predict(test_imgs)
+
+	for i, reponse in enumerate(reponses):
+		if int(reponse) == test_labels[i][0]:
+			nbReussites+=1
+
+	reussite = str((float(nbReussites)/float(len(reponses))))
+
+	print("Neigh a trouvé " + str(nbReussites) + " reponses justses. Bravo Neigh !")
+	print("pourcentage de réussite de Neigh : " + reussite)
+
+	print("au revoir")
+
+	print("PS : voici les reponses que neigh a trouve")
+	print(reponses)
+
+	return reponses
 
 
 
 if __name__ == "__main__":
 	
+	print("Import des donnees" + str(time.clock()))
 	train_data, test_data = importData()
 
+	print("pretraitement" + str(time.clock()))
 	traitees = pretraitement(train_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
 	traitessTest = pretraitement(test_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
 
 	# traitees = acp(traitees, 500)
 	# traitessTest = acp(traitessTest, 500)
 
-	KNN(traitees[:100], train_data['y'][:100], traitessTest[:100], test_data['y'][:100], 3)
+	trainedKNN(traitessTest[:100], test_data["y"][:100], "myKNN.pkl")
