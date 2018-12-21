@@ -18,6 +18,16 @@ class LeNet(nn.Module):
         self.fc2   = nn.Linear(120, 84)
         self.fc3   = nn.Linear(84, 10)
 
+        i = 0
+
+        for parameter in self.parameters():
+            nbweight = 1
+            print(parameter.shape)
+            for dim in parameter.shape:
+                nbweight *= dim
+            i += nbweight
+        print(i)
+
     def forward(self, x):
             x = F.relu(F.max_pool2d(self.conv1(x), 2))
             x = F.relu(F.max_pool2d(self.conv2(x), 2))
@@ -36,6 +46,16 @@ class CNN(nn.Module):
             self.fc1 = nn.Linear(1250, 500)
             self.fc2 = nn.Linear(500, 10)
 
+            i = 0
+
+            for parameter in self.parameters():
+                nbweight = 1
+                print(parameter.shape)
+                for dim in parameter.shape:
+                    nbweight *= dim
+                i += nbweight
+            print(i)
+
     def forward(self, x):
             x = F.relu(F.max_pool2d(self.conv1(x), 2))
             x = F.relu(F.max_pool2d(self.conv2(x), 2))
@@ -43,15 +63,32 @@ class CNN(nn.Module):
             x = F.relu(self.fc1(x))
             x = F.log_softmax(self.fc2(x), dim=1)
 
+            # print("fct1 has " + str(len(list(self.fc1.parameters())))+"weigths")
+            # print(list(self.fc1.parameters()))
+
+           
+
+
             return x
 
 class MLP(nn.Module):
     def __init__(self):
         super(MLP, self).__init__()
         self.fc1 = nn.Linear(32*32*3, 90) 
+        print("fct1 has " + str(len(list(self.fc1.parameters())))+"weigths")
         self.relu = nn.ReLU()
         self.fc2 = nn.Linear(90, 10)  
-        # self.fc3 = nn.Linear(500, 10)  
+        # self.fc3 = nn.Linear(500, 10) 
+
+        i = 0
+
+        for parameter in self.parameters():
+            nbweight = 1
+            print(parameter.shape)
+            for dim in parameter.shape:
+                nbweight *= dim
+            i += nbweight
+        print(i) 
     
     def forward(self, x):
             x = x.contiguous().view(x.shape[0], -1) # Flatten the tensor
@@ -144,4 +181,4 @@ def main( model, epoch_nbr = 10, batch_size = 10, learning_rate = 1e-3):
 
 
 if __name__ == '__main__':
-    main()
+    main("cnn", epoch_nbr = 10)
