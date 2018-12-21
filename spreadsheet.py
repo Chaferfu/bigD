@@ -3,6 +3,7 @@ import gspread
 import clean
 import time
 from oauth2client.service_account import ServiceAccountCredentials
+import dl_SVHM
 
 def next_available_row(worksheet):
     str_list = list(filter(None, worksheet.col_values(1)))  # fastest
@@ -13,17 +14,18 @@ creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', s
 client = gspread.authorize(creds)
 
 sh = client.open('results')
-knnn = sh.worksheet("KNN n")
+lenet = sh.worksheet("lenet")
+cnn = sh.worksheet("CNN")
+mlp = sh.worksheet("MLP")
+
+# lenet.insert_row(dl_SVHM.main("lenet"), 2)
+# lenet.insert_row(dl_SVHM.main("lenet"), 2)
+# lenet.insert_row(dl_SVHM.main("lenet"), 2)
+# lenet.insert_row(dl_SVHM.main("lenet"), 2)
+# lenet.insert_row(dl_SVHM.main("lenet"), 2)
 
 
-train_data, test_data = clean.importData()
-
-traitees = clean.pretraitement(train_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
-traitessTest = clean.pretraitement(test_data["X"], val = 106, upper = 240, lower = 100, blackWhite = True)
-nb = 15000
-for n in range(3,30):
-
-	line = clean.KNN(traitees[:nb], train_data['y'][:nb], traitessTest[:100], test_data['y'][:100], n)
-	line.extend([nb, float(n)/float(nb)])
-	knnn.insert_row(line, 2)
-
+lines = dl_SVHM.main("mlp", epoch_nbr = 5, batch_size = 10, learning_rate = 1e-3)
+# lenet.insert_row(dl_SVHM.main("lenet", epoch_nbr = 10, batch_size = 7, learning_rate = 2.8e-3), 2)
+for line in lines:
+	mlp.insert_row(line, 2)

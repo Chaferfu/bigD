@@ -19,15 +19,13 @@ class LeNet(nn.Module):
         self.fc3   = nn.Linear(84, 10)
 
     def forward(self, x):
-        out = F.relu(self.conv1(x))
-        out = F.max_pool2d(out, 2)
-        out = F.relu(self.conv2(out))
-        out = F.max_pool2d(out, 2)
-        out = out.view(out.size(0), -1)
-        out = F.relu(self.fc1(out))
-        out = F.relu(self.fc2(out))
-        out = self.fc3(out)
-        return out
+            x = F.relu(F.max_pool2d(self.conv1(x), 2))
+            x = F.relu(F.max_pool2d(self.conv2(x), 2))
+            x = x.view(x.shape[0], -1) # Flatten the tensor
+            x = F.relu(self.fc1(x))
+            x = F.relu(self.fc2(x))
+            x = F.log_softmax(self.fc3(x), dim=1)
+            return x
 
 class CNN(nn.Module):
 
@@ -47,8 +45,23 @@ class CNN(nn.Module):
 
             return x
 
+class MLP(nn.Module):
+    def __init__(self):
+        super(MLP, self).__init__()
+        self.fc1 = nn.Linear(32*32*3, 90) 
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(90, 10)  
+        # self.fc3 = nn.Linear(500, 10)  
+    
+    def forward(self, x):
+            x = x.contiguous().view(x.shape[0], -1) # Flatten the tensor
+            x = F.relu(self.fc1(x))
+            # x = F.relu(self.fc2(x))
+            x = F.log_softmax(self.fc2(x), dim=1)
 
-def main(epoch_nbr = 10, batch_size = 10, learning_rate = 1e-3):
+            return x
+
+def main( model, epoch_nbr = 10, batch_size = 10, learning_rate = 1e-3):
 
     # Load the dataset
     train_data = loadmat('train_32x32.mat')
@@ -70,13 +83,21 @@ def main(epoch_nbr = 10, batch_size = 10, learning_rate = 1e-3):
     # learning_rate = 1e-3
 
 
+    if model == "cnn":
+        net = CNN()
+    elif model == "lenet":
+        net = LeNet()
+    elif model == "mlp":
+        net = MLP()
+    else:
+        print("erreur : le reseau " + modele + "n'existe pas")
+        return
 
-    net = CNN()
     optimizer = optim.SGD(net.parameters(), lr=learning_rate)
     trainingTime = 0
     reussiteTrain = ""
     reussiteTest = ""
-
+    resultats = []
     for e in range(epoch_nbr):
         print("Epoch", e)
         startEpoch = time.clock()
@@ -98,6 +119,7 @@ def main(epoch_nbr = 10, batch_size = 10, learning_rate = 1e-3):
         predictions_train = net(train_data)
         _, class_predicted = torch.max(predictions_train, 1)
         predictTimeTrain = time.clock() - startPredictTrain
+        # print(class_predicted)
         resultTrain = (class_predicted == train_label)
         resultTrain = resultTrain.type(torch.int32)
         reussiteTrain = str(float(sum(resultTrain))/float(len(resultTrain)))
@@ -114,9 +136,11 @@ def main(epoch_nbr = 10, batch_size = 10, learning_rate = 1e-3):
         reussiteTest = str(float(sum(resultTest))/float(len(resultTest)))
         print("resultTest" + reussiteTest, end="\n\n")
 
-    trainingTimePerEpoch = trainingTime / epoch_nbr
+        trainingTimePerEpoch = trainingTime /( e+1)
 
-    return [str(datetime.datetime.now()), epoch_nbr, batch_size, learning_rate, reussiteTrain, reussiteTest, trainingTimePerEpoch, trainingTime  ]
+        resultats.append([str(datetime.datetime.now()), e+1, batch_size, learning_rate, reussiteTrain, reussiteTest, trainingTimePerEpoch, trainingTime , model ])
+
+    return resultats
 
 
 if __name__ == '__main__':
